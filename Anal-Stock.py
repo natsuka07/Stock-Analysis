@@ -3,144 +3,124 @@ import yfinance as yf
 import seaborn as sb
 import pandas as pd
 import numpy as np
-import datetime
-# ===========================================================
+from datetime import datetime, timedelta
 
+# ==========================
+tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
+end_date = datetime.now()
+start_date = end_date - timedelta(days=3*365)
 
+# Download saham (adjusted price)
+print("Downloading stock data...")
+data = yf.download(tickers, start=start_date, end=end_date,
+                  progress=False, auto_adjust=True)
 
-ticker_symbol = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
-end_date = datetime.datetime.now()
-start_date = end_date - datetime.timedelta(days= 5 * 365)
-stock_data_yf = pd.DataFrame()
+if data.empty or 'Close' not in data.columns:
+    raise ValueError("Gagal download data saham!")
 
-# = =========================================================== exchange rate 1
-# rates = ['IDRUSD=X', 'HKDUSD=X']
-# tickers = yf.download(' '.join(rates))
-# exchange_rates = []
-# for i in ticker_symbol.tickers:
-#     exchange_rates.append(ticker_symbol.ticker[i].history(start=start_date, end=end_date).Close)
+prices = data['Close'].copy()   # ini sudah adjusted close
 
-# ex_df = pd.DataFrame(exchange_rates).T
-# ex_df.columns = rates
-# ex_df['USDUSD=X'] = 1.0
+# Download kurs USD/IDR
+print("Downloading USD/IDR exchange rate...")
+raw = yf.download('IDR=X', start=start_date, end=end_date,
+                  progress=False, auto_adjust=True)
 
-# assets = {'IBM': 'USD',
-#           'ADBE':'USD',
-#           'TLKM.JK':'IDR',
-#           'TCEHY':'USD'}
+if raw.empty:
+    raise ValueError("Kurs IDR=X kosong!")
 
-# =========================================================== exchange rate 2
-# fx_mapping = {
-#     'USD': 'USDIRR=X',  # USD to IDR
-#     'IDR': None,        # Sudah IDR, no konversi
-#     'HKD': 'HKDIRR=X'   # HKD to IDR
-# }
+exchange_rate = raw['Close'].copy()
+exchange_rate.name = 'USDIDR'
+exchange_rate = 1 / exchange_rate   # IDR=X → USD/IDR
 
-# # Mapping ticker ke mata uang (sesuaikan jika tambah ticker)
-# currency_map = {
-#     'IBM': 'USD',
-#     'TLKM.JK': 'IDR',
-#     'ADBE': 'USD',
-#     'TCEHY': 'HKD'
-# }
+# Sesuaikan index & isi missing values
+exchange_rate = exchange_rate.reindex(prices.index, method='nearest')
+# atau lebih lembut:
+exchange_rate = exchange_rate.reindex(prices.index).ffill().bfill()
 
-# fx_data = {}
+# Gabungkan
+df = prices.copy()
+df['USDIDR'] = exchange_rate
 
-# for ticker, currency in currency_map.items():
-#     if currency != 'IDR':
-#         try:
-#             fx_ticker = fx_mapping[currency]
-#             fx = yf.download(fx_ticker, start=start_date, end=end_date, progress=False)
-#             if not fx.empty and 'Close' in fx.columns:
-#                 fx_data[fx_ticker] = fx['Close']
-#                 print(f"FX data downloaded for {currency}: {fx_ticker}")
-#             else:
-#                 print(f"Warning: FX data empty for {currency}")
-#         except Exception as e:
-#             print(f"Error fetching FX for {currency}: {e}")
+# Konversi TLKM.JK dari IDR ke USD
+df['TLKM.JK'] = df['TLKM.JK'] / df['USDIDR']
 
-# =========================================================== exchange rate 3
-assets_currency = {
-    'IBM': 'USD',
-    'TLKM.JK': 'IDR',
-    'ADBE': 'USD',
-    'TCEHY': 'USD'
-}
-prices_raw = pd.DataFrame()
+# Hapus kolom temporary
+df = df.drop(columns=['USDIDR'])
 
-for ticker in ticker_symbol:
-    data = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=True)
-    if not data.empty:
-        prices_raw[ticker] = data['Close']   # auto_adjust=True → Close sudah = Adj Close
-    else:
-        print(f"Gagal download {ticker}")
+# Final DataFrame
+stock_data_usd = df
 
-print("Download saham selesai\n")
+print("Sukses! Data 5 tahun (TLKM.JK sudah dalam USD):")
+print(stock_data_usd.tail(10))
 
-# ================== DOWNLOAD KURS IDR → USD (hanya satu yang dibutuhkan) ==================
-# IDRUSD=X = berapa USD yang didapat dari 1 IDR
-idr_to_usd = yf.download('IDRUSD=X', start=start_date, end=end_date, progress=False)['Close']
-
-# Forward-fill kalau ada hari libur
-idr_to_usd = idr_to_usd.reindex(prices_raw.index).ffill().bfill()
-
-# ================== KONVERSI SEMUA KE USD ==================
-prices_usd = prices_raw.copy()
-
-for ticker in ticker_symbol:
-    currency = assets_currency.get(ticker, 'USD')
-    
-    if currency == 'USD':
-        # sudah USD, tidak perlu apa-apa
-        continue
-    elif currency == 'IDR':
-        # Konversi IDR → USD
-        prices_usd[ticker] = prices_raw[ticker] * idr_to_usd
-    else:
-        print(f"Belum support konversi dari {currency} untuk {ticker}")
-
-for ticker in ticker_symbol :
-    try:
-        data = yf.download(ticker, start = start_date, end = end_date, progress = False)
-        if not data.empty:
-            if 'Adj Close' in data.columns:
-                stock_data_yf[ticker] = data['Adj Close']
-            elif 'Close' in data.columns:
-                    # Fallback to 'Close' price if 'Adj Close' is not available (e.g., if auto_adjust makes them identical)
-                stock_data_yf[ticker] = data['Close']
-                print(f"Warning: 'Adj Close' not found for {ticker}, using 'Close' price.")
-            else:
-                print(f"Could not find 'Adj Close' or 'Close' data for {ticker}.")
-        else:
-            print(f"Data ga ke kedownload untuk {ticker}")
-    except Exception as e:
-        print(f"Error fetching data for {ticker}: {e}")
-
-stock_data_yf.dropna(inplace=True)
-
-# Lima baris pertama dari dataframe
-print("Data harga saham historis (Adj Close) untuk 5 saham:")
-print(stock_data_yf.head())
-
-print("\nInformasi DataFrame:\n")
-stock_data_yf.info()
-
-# ===========================================================
+# Plot
 plt.figure(figsize=(18, 9))
-stock_data_yf.plot(ax=plt.gca())
-plt.title('Historical Adjusted Close Prices for Selected Stocks')
-plt.xlabel('Date')
-plt.ylabel('Adjusted Close Price (USD)')
-plt.legend(title='Ticker')
-plt.grid(True)
+stock_data_usd.plot()
+plt.title('5-Year Historical Stock Prices\n(IBM, TLKM.JK, ADBE, TCEHY) — TLKM.JK converted to USD', fontsize=16)
+plt.xlabel('Tanggal')
+plt.ylabel('Harga (USD)')
+plt.legend(title='Saham')
+plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+# ===========================================================
+# ==========================
+tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
+end_date = datetime.now()
+start_date = end_date - timedelta(days=5*365)
 
-print("Grafik harga saham historis telah ditampilkan.")
+# Download saham (adjusted price)
+print("Downloading stock data...")
+data = yf.download(tickers, start=start_date, end=end_date,
+                  progress=False, auto_adjust=True)
 
+if data.empty or 'Close' not in data.columns:
+    raise ValueError("Gagal download data saham!")
 
+prices = data['Close'].copy()   # ini sudah adjusted close
 
+# Download kurs USD/IDR
+print("Downloading USD/IDR exchange rate...")
+raw = yf.download('IDR=X', start=start_date, end=end_date,
+                  progress=False, auto_adjust=True)
 
+if raw.empty:
+    raise ValueError("Kurs IDR=X kosong!")
 
+exchange_rate = raw['Close'].copy()
+exchange_rate.name = 'USDIDR'
+exchange_rate = 1 / exchange_rate   # IDR=X → USD/IDR
+
+# Sesuaikan index & isi missing values
+exchange_rate = exchange_rate.reindex(prices.index, method='nearest')
+# atau lebih lembut:
+exchange_rate = exchange_rate.reindex(prices.index).ffill().bfill()
+
+# Gabungkan
+df = prices.copy()
+df['USDIDR'] = exchange_rate
+
+# Konversi TLKM.JK dari IDR ke USD
+df['TLKM.JK'] = df['TLKM.JK'] / df['USDIDR']
+
+# Hapus kolom temporary
+df = df.drop(columns=['USDIDR'])
+
+# Final DataFrame
+stock_data_usd = df
+
+print("Sukses! Data 5 tahun (TLKM.JK sudah dalam USD):")
+print(stock_data_usd.tail(10))
+
+# Plot
+plt.figure(figsize=(18, 9))
+stock_data_usd.plot()
+plt.title('5-Year Historical Stock Prices\n(IBM, TLKM.JK, ADBE, TCEHY) — TLKM.JK converted to USD', fontsize=16)
+plt.xlabel('Tanggal')
+plt.ylabel('Harga (USD)')
+plt.legend(title='Saham')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
 
 # ===========================================================
