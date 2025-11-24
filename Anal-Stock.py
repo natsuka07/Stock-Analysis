@@ -6,46 +6,50 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # ==========================
-# tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
+# (NVDA) NVIDIA - King
+# (META) META - AI + Advertising + Metaverse play
+# (AVGO) Broadcom - AI chips + semiconductor + VMware
+# (LLY) Eli Lilly - GLP-1 (Ozempic competitor) + pharma-AI
+# (ASML) ASML Holding - EUV lithography monopoly
 tickers = ['NVDA', 'META', 'AVGO', 'LLY', 'ASML']
-end_date = datetime.now()
-start_date = end_date - timedelta(days=3*365)
+waktu_berakhir = datetime.now()
+waktu_mulai = waktu_berakhir - timedelta(days=5*365)
 
-stock_data_yf = pd.DataFrame()
+data_saham = pd.DataFrame()
 
-for ticker in tickers:
+for otak in tickers:
     try:
-        # Download data for a single ticker
-        data = yf.download(ticker, start=start_date, end=end_date, progress=False) # progress=False to reduce output
+        # Download data for a single otak
+        data = yf.download(otak, start=waktu_mulai, end=waktu_berakhir, progress=False) # progress=False to reduce output
         if not data.empty:
             if 'Adj Close' in data.columns:
-                stock_data_yf[ticker] = data['Adj Close']
+                data_saham[otak] = data['Adj Close']
             elif 'Close' in data.columns:
                 # Fallback to 'Close' price if 'Adj Close' is not available (e.g., if auto_adjust makes them identical)
-                stock_data_yf[ticker] = data['Close']
-                print(f"Warning: 'Adj Close' not found for {ticker}, using 'Close' price.")
+                data_saham[otak] = data['Close']
+                print(f"Warning: 'Adj Close' not found for {otak}, using 'Close' price.")
             else:
-                print(f"Could not find 'Adj Close' or 'Close' data for {ticker}.")
+                print(f"Could not find 'Adj Close' or 'Close' data for {otak}.")
         else:
-            print(f"No data downloaded for {ticker}.")
+            print(f"No data downloaded for {otak}.")
     except Exception as e:
-        print(f"Error fetching data for {ticker}: {e}")
+        print(f"Error fetching data for {otak}: {e}")
 
 # Drop any rows with missing values that might occur if some dates are not present for all stocks
-stock_data_yf.dropna(inplace=True)
+data_saham.dropna(inplace=True)
 
 # 4. Tampilkan lima baris pertama dari DataFrame
 print("Data harga saham historis (Adj Close) untuk 5 saham:")
-print(stock_data_yf.head())
+print(data_saham.head())
 
 print("\nInformasi DataFrame:\n")
-stock_data_yf.info()
+data_saham.info()
 
 # Plot
 plt.figure(figsize=(18, 9))
-stock_data_yf.plot()
-plt.title('5-Year Historical Stock Prices', fontsize=16)
-plt.xlabel('Tanggal')
+data_saham.plot()
+plt.title('Harga saham selama 5 tahun', fontsize=16)
+plt.xlabel('tahun')
 plt.ylabel('Harga (USD)')
 plt.legend(title='Saham')
 plt.grid(True, alpha=0.3)
