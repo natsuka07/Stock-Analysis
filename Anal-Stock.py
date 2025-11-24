@@ -6,57 +6,45 @@ import numpy as np
 from datetime import datetime, timedelta
 
 # ==========================
-tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
+# tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
+tickers = ['NVDA', 'META', 'AVGO', 'LLY', 'ASML']
 end_date = datetime.now()
 start_date = end_date - timedelta(days=3*365)
 
-# Download saham (adjusted price)
-print("Downloading stock data...")
-data = yf.download(tickers, start=start_date, end=end_date,
-                  progress=False, auto_adjust=True)
+stock_data_yf = pd.DataFrame()
 
-if data.empty or 'Close' not in data.columns:
-    raise ValueError("Gagal download data saham!")
+for ticker in tickers:
+    try:
+        # Download data for a single ticker
+        data = yf.download(ticker, start=start_date, end=end_date, progress=False) # progress=False to reduce output
+        if not data.empty:
+            if 'Adj Close' in data.columns:
+                stock_data_yf[ticker] = data['Adj Close']
+            elif 'Close' in data.columns:
+                # Fallback to 'Close' price if 'Adj Close' is not available (e.g., if auto_adjust makes them identical)
+                stock_data_yf[ticker] = data['Close']
+                print(f"Warning: 'Adj Close' not found for {ticker}, using 'Close' price.")
+            else:
+                print(f"Could not find 'Adj Close' or 'Close' data for {ticker}.")
+        else:
+            print(f"No data downloaded for {ticker}.")
+    except Exception as e:
+        print(f"Error fetching data for {ticker}: {e}")
 
-prices = data['Close'].copy()   # ini sudah adjusted close
+# Drop any rows with missing values that might occur if some dates are not present for all stocks
+stock_data_yf.dropna(inplace=True)
 
-# Download kurs USD/IDR
-print("Downloading USD/IDR exchange rate...")
-raw = yf.download('IDR=X', start=start_date, end=end_date,
-                  progress=False, auto_adjust=True)
+# 4. Tampilkan lima baris pertama dari DataFrame
+print("Data harga saham historis (Adj Close) untuk 5 saham:")
+print(stock_data_yf.head())
 
-if raw.empty:
-    raise ValueError("Kurs IDR=X kosong!")
-
-exchange_rate = raw['Close'].copy()
-exchange_rate.name = 'USDIDR'
-exchange_rate = 1 / exchange_rate   # IDR=X → USD/IDR
-
-# Sesuaikan index & isi missing values
-exchange_rate = exchange_rate.reindex(prices.index, method='nearest')
-# atau lebih lembut:
-exchange_rate = exchange_rate.reindex(prices.index).ffill().bfill()
-
-# Gabungkan
-df = prices.copy()
-df['USDIDR'] = exchange_rate
-
-# Konversi TLKM.JK dari IDR ke USD
-df['TLKM.JK'] = df['TLKM.JK'] / df['USDIDR']
-
-# Hapus kolom temporary
-df = df.drop(columns=['USDIDR'])
-
-# Final DataFrame
-stock_data_usd = df
-
-print("Sukses! Data 5 tahun (TLKM.JK sudah dalam USD):")
-print(stock_data_usd.tail(10))
+print("\nInformasi DataFrame:\n")
+stock_data_yf.info()
 
 # Plot
 plt.figure(figsize=(18, 9))
-stock_data_usd.plot()
-plt.title('5-Year Historical Stock Prices\n(IBM, TLKM.JK, ADBE, TCEHY) — TLKM.JK converted to USD', fontsize=16)
+stock_data_yf.plot()
+plt.title('5-Year Historical Stock Prices', fontsize=16)
 plt.xlabel('Tanggal')
 plt.ylabel('Harga (USD)')
 plt.legend(title='Saham')
@@ -64,63 +52,8 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 # ===========================================================
-# ==========================
-tickers = ['IBM', 'TLKM.JK', 'ADBE', 'TCEHY']
-end_date = datetime.now()
-start_date = end_date - timedelta(days=5*365)
-
-# Download saham (adjusted price)
-print("Downloading stock data...")
-data = yf.download(tickers, start=start_date, end=end_date,
-                  progress=False, auto_adjust=True)
-
-if data.empty or 'Close' not in data.columns:
-    raise ValueError("Gagal download data saham!")
-
-prices = data['Close'].copy()   # ini sudah adjusted close
-
-# Download kurs USD/IDR
-print("Downloading USD/IDR exchange rate...")
-raw = yf.download('IDR=X', start=start_date, end=end_date,
-                  progress=False, auto_adjust=True)
-
-if raw.empty:
-    raise ValueError("Kurs IDR=X kosong!")
-
-exchange_rate = raw['Close'].copy()
-exchange_rate.name = 'USDIDR'
-exchange_rate = 1 / exchange_rate   # IDR=X → USD/IDR
-
-# Sesuaikan index & isi missing values
-exchange_rate = exchange_rate.reindex(prices.index, method='nearest')
-# atau lebih lembut:
-exchange_rate = exchange_rate.reindex(prices.index).ffill().bfill()
-
-# Gabungkan
-df = prices.copy()
-df['USDIDR'] = exchange_rate
-
-# Konversi TLKM.JK dari IDR ke USD
-df['TLKM.JK'] = df['TLKM.JK'] / df['USDIDR']
-
-# Hapus kolom temporary
-df = df.drop(columns=['USDIDR'])
-
-# Final DataFrame
-stock_data_usd = df
-
-print("Sukses! Data 5 tahun (TLKM.JK sudah dalam USD):")
-print(stock_data_usd.tail(10))
-
-# Plot
-plt.figure(figsize=(18, 9))
-stock_data_usd.plot()
-plt.title('5-Year Historical Stock Prices\n(IBM, TLKM.JK, ADBE, TCEHY) — TLKM.JK converted to USD', fontsize=16)
-plt.xlabel('Tanggal')
-plt.ylabel('Harga (USD)')
-plt.legend(title='Saham')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
-
 # ===========================================================
+
+
+
+
