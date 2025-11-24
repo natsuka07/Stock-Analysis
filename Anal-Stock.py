@@ -1,9 +1,9 @@
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import yfinance as yf
 import seaborn as sb
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 
 # ==========================
 # (NVDA) NVIDIA - King
@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 # (AVGO) Broadcom - AI chips + semiconductor + VMware
 # (LLY) Eli Lilly - GLP-1 (Ozempic competitor) + pharma-AI
 # (ASML) ASML Holding - EUV lithography monopoly
+
 tickers = ['NVDA', 'META', 'AVGO', 'LLY', 'ASML']
 waktu_berakhir = datetime.now()
 waktu_mulai = waktu_berakhir - timedelta(days=5*365)
@@ -55,9 +56,15 @@ plt.legend(title='Saham')
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+
 # ===========================================================
+print("Informasi Ringkas DataFrame data_saham:")
+data_saham.info()
+
+print("\nStatistik Deskriptif DataFrame data_saham:")
+print(data_saham.describe())
+
+print("\nJumlah Nilai Hilang per Kolom di data_saham:")
+print(data_saham.isnull().sum())
+
 # ===========================================================
-
-
-
-
