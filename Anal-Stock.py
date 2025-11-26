@@ -37,8 +37,8 @@ for ticker in tickers:
 # Drop any rows with missing values that might occur if some dates are not present for all stocks
 data_saham.dropna(inplace=True)
 
-# 4. Tampilkan lima baris pertama dari DataFrame
-print("Data harga saham historis (Adj Close) untuk 5 saham:")
+# Tampilkan lima baris pertama dari DataFrame
+print("\nData harga saham historis (Close) untuk 5 saham:")
 print(data_saham.head())
 
 print("\nInformasi DataFrame:\n")
@@ -56,7 +56,7 @@ plt.tight_layout()
 plt.show()
 
 # ===========================================================
-print("Informasi Ringkas DataFrame data_saham:")
+print("\nInformasi Ringkas DataFrame data_saham:")
 data_saham.info()
 
 print("\nStatistik Deskriptif DataFrame data_saham:")
@@ -69,15 +69,15 @@ print(data_saham.isnull().sum())
 
 daily_returns = data_saham.pct_change().dropna()
 
-# 5. Hitung monthly returns
+# Hitung monthly returns
 # Resample data to get the last trading day of each month and calculate percentage change
 monthly_returns = data_saham.resample('ME').last().pct_change().dropna()
 
-# 6. Normalisasi data
+# Normalisasi data
 # Divide each price by the price on the first day for each stock
 normalized_stock_data = data_saham / data_saham.iloc[0]
 
-# 7. Tampilkan lima baris pertama dari daily_returns, monthly_returns, dan normalized_stock_data
+# Tampilkan lima baris pertama dari daily_returns, monthly_returns, dan normalized_stock_data
 print("\nLima Baris Pertama Daily Returns:")
 print(daily_returns.head())
 
