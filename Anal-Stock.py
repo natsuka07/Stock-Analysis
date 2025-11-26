@@ -1,9 +1,7 @@
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import yfinance as yf
-import seaborn as sb
 import pandas as pd
-import numpy as np
 
 # ==========================
 # (NVDA) NVIDIA - King
@@ -18,23 +16,23 @@ waktu_mulai = waktu_berakhir - timedelta(days=5*365)
 
 data_saham = pd.DataFrame()
 
-for otak in tickers:
+for ticker in tickers:
     try:
-        # Download data for a single otak
-        data = yf.download(otak, start=waktu_mulai, end=waktu_berakhir, progress=False) # progress=False to reduce output
+        # Download data for a single ticker
+        data = yf.download(ticker, start=waktu_mulai, end=waktu_berakhir, progress=False) # progress=False to reduce output
         if not data.empty:
             if 'Adj Close' in data.columns:
-                data_saham[otak] = data['Adj Close']
+                data_saham[ticker] = data['Adj Close']
             elif 'Close' in data.columns:
                 # Fallback to 'Close' price if 'Adj Close' is not available (e.g., if auto_adjust makes them identical)
-                data_saham[otak] = data['Close']
-                print(f"Warning: 'Adj Close' not found for {otak}, using 'Close' price.")
+                data_saham[ticker] = data['Close']
+                print(f"Warning: 'Adj Close' not found for {ticker}, using 'Close' price.")
             else:
-                print(f"Could not find 'Adj Close' or 'Close' data for {otak}.")
+                print(f"Could not find 'Adj Close' or 'Close' data for {ticker}.")
         else:
-            print(f"No data downloaded for {otak}.")
+            print(f"No data downloaded for {ticker}.")
     except Exception as e:
-        print(f"Error fetching data for {otak}: {e}")
+        print(f"Error fetching data for {ticker}: {e}")
 
 # Drop any rows with missing values that might occur if some dates are not present for all stocks
 data_saham.dropna(inplace=True)
@@ -67,4 +65,25 @@ print(data_saham.describe())
 print("\nJumlah Nilai Hilang per Kolom di data_saham:")
 print(data_saham.isnull().sum())
 
+# ===========================================================
+
+daily_returns = data_saham.pct_change().dropna()
+
+# 5. Hitung monthly returns
+# Resample data to get the last trading day of each month and calculate percentage change
+monthly_returns = data_saham.resample('ME').last().pct_change().dropna()
+
+# 6. Normalisasi data
+# Divide each price by the price on the first day for each stock
+normalized_stock_data = data_saham / data_saham.iloc[0]
+
+# 7. Tampilkan lima baris pertama dari daily_returns, monthly_returns, dan normalized_stock_data
+print("\nLima Baris Pertama Daily Returns:")
+print(daily_returns.head())
+
+print("\nLima Baris Pertama Monthly Returns:")
+print(monthly_returns.head())
+
+print("\nLima Baris Pertama Normalized Stock Data:")
+print(normalized_stock_data.head())
 # ===========================================================
