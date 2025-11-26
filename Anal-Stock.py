@@ -48,7 +48,7 @@ data_saham.info()
 
 # Plot
 plt.figure(figsize=(18, 9))
-data_saham.plot()
+data_saham.plot(ax=plt.gca())
 plt.title('Harga saham selama 5 tahun', fontsize=16)
 plt.xlabel('tahun')
 plt.ylabel('Harga (USD)')
